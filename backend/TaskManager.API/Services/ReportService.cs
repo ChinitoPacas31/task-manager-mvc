@@ -3,6 +3,9 @@ using TaskManager.API.Data;
 using TaskManager.API.DTOs;
 using TaskManager.API.Models;
 using TaskManager.API.Repositories;
+using CsvHelper;
+using System.Globalization;
+using System.Text;
 
 namespace TaskManager.API.Services;
 
@@ -148,5 +151,106 @@ public class ReportService : IReportService
         }
 
         return responses;
+    }
+
+    public async Task<byte[]> ExportProductivityReportToCsvAsync()
+    {
+        var report = await GetProductivityReportAsync();
+        
+        using (var memoryStream = new MemoryStream())
+        using (var writer = new StreamWriter(memoryStream, Encoding.UTF8))
+        using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            csvWriter.WriteRecords(report.ConvertAll(r => new
+            {
+                r.UserId,
+                r.UserName,
+                r.TasksAssigned,
+                r.TasksCompleted,
+                AverageCompletionTimeHours = r.AverageCompletionTime,
+                r.TotalHoursWorked
+            }));
+            
+            writer.Flush();
+            return memoryStream.ToArray();
+        }
+    }
+
+    public async Task<byte[]> ExportDashboardStatsToCsvAsync()
+    {
+        var stats = await GetDashboardStatsAsync();
+        
+        using (var memoryStream = new MemoryStream())
+        using (var writer = new StreamWriter(memoryStream, Encoding.UTF8))
+        using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            // Write main stats
+            var mainStats = new[]
+            {
+                new { Metric = "Total Tasks", Value = stats.TotalTasks.ToString() },
+                new { Metric = "Completed Tasks", Value = stats.CompletedTasks.ToString() },
+                new { Metric = "Pending Tasks", Value = stats.PendingTasks.ToString() },
+                new { Metric = "In Progress Tasks", Value = stats.InProgressTasks.ToString() },
+                new { Metric = "High Priority Tasks", Value = stats.HighPriorityTasks.ToString() },
+                new { Metric = "Overdue Tasks", Value = stats.OverdueTasks.ToString() },
+                new { Metric = "Total Projects", Value = stats.TotalProjects.ToString() },
+                new { Metric = "Active Projects", Value = stats.ActiveProjects.ToString() }
+            };
+            
+            csvWriter.WriteRecords(mainStats);
+            writer.WriteLine();
+            
+            // Write tasks by status
+            writer.WriteLine("Tasks by Status");
+            csvWriter.WriteRecords(stats.TasksByStatus.ConvertAll(ts => new
+            {
+                ts.Status,
+                ts.Count
+            }));
+            writer.WriteLine();
+            
+            // Write tasks by priority
+            writer.WriteLine("Tasks by Priority");
+            csvWriter.WriteRecords(stats.TasksByPriority.ConvertAll(tp => new
+            {
+                tp.Priority,
+                tp.Count
+            }));
+            writer.WriteLine();
+            
+            // Write tasks by project
+            writer.WriteLine("Tasks by Project");
+            csvWriter.WriteRecords(stats.TasksByProject.ConvertAll(tp => new
+            {
+                tp.ProjectName,
+                tp.TotalTasks,
+                tp.CompletedTasks
+            }));
+            
+            writer.Flush();
+            return memoryStream.ToArray();
+        }
+    }
+
+    public async Task<byte[]> ExportRecentActivityToCsvAsync(int limit = 100)
+    {
+        var activity = await GetRecentActivityAsync(limit);
+        
+        using (var memoryStream = new MemoryStream())
+        using (var writer = new StreamWriter(memoryStream, Encoding.UTF8))
+        using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            csvWriter.WriteRecords(activity.ConvertAll(a => new
+            {
+                a.TaskTitle,
+                a.Action,
+                a.Description,
+                UserName = a.User?.FullName ?? "Unknown",
+                a.CreatedAt
+            }));
+            
+            writer.Flush();
+            return memoryStream.ToArray();
+        }
     }
 }

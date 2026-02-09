@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { reportService } from '@/services/report.service';
 import { DashboardStats } from '@/types';
-import { BarChart3, Users, TrendingUp, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { BarChart3, Users, TrendingUp, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -26,6 +26,30 @@ export default function ReportsPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [productivityData, setProductivityData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<{ [key: string]: boolean }>({});
+
+  const handleExportCsv = async (type: 'productivity' | 'dashboard' | 'activity') => {
+    try {
+      setExporting(prev => ({ ...prev, [type]: true }));
+      
+      switch (type) {
+        case 'productivity':
+          await reportService.exportProductivityReportToCsv();
+          break;
+        case 'dashboard':
+          await reportService.exportDashboardStatsToCsv();
+          break;
+        case 'activity':
+          await reportService.exportRecentActivityToCsv();
+          break;
+      }
+    } catch (error) {
+      console.error('Error exporting:', error);
+      alert('Error al exportar el reporte');
+    } finally {
+      setExporting(prev => ({ ...prev, [type]: false }));
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,9 +80,21 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Reportes</h2>
-        <p className="text-gray-500">Análisis y estadísticas del sistema</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Reportes</h2>
+          <p className="text-gray-500">Análisis y estadísticas del sistema</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleExportCsv('dashboard')}
+            disabled={exporting['dashboard']}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download size={18} />
+            {exporting['dashboard'] ? 'Exportando...' : 'Descargar Dashboard CSV'}
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -199,8 +235,16 @@ export default function ReportsPage() {
 
       {/* Productivity Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b">
+        <div className="p-6 border-b flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900">Reporte de Productividad</h3>
+          <button
+            onClick={() => handleExportCsv('productivity')}
+            disabled={exporting['productivity']}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download size={16} />
+            {exporting['productivity'] ? 'Exportando...' : 'Descargar CSV'}
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">

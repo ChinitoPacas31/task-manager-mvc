@@ -38,4 +38,28 @@ public class ReportsController : ControllerBase
         var activity = await _reportService.GetRecentActivityAsync(limit);
         return Ok(activity);
     }
+
+    [HttpGet("productivity/export-csv")]
+    public async Task<IActionResult> ExportProductivityReportToCsv()
+    {
+        var csvData = await _reportService.ExportProductivityReportToCsvAsync();
+        var fileName = $"ProductivityReport_{DateTime.UtcNow:yyyy-MM-dd_HHmmss}.csv";
+        return File(csvData, "text/csv", fileName);
+    }
+
+    [HttpGet("dashboard/export-csv")]
+    public async Task<IActionResult> ExportDashboardStatsToCsv()
+    {
+        var csvData = await _reportService.ExportDashboardStatsToCsvAsync();
+        var fileName = $"DashboardStats_{DateTime.UtcNow:yyyy-MM-dd_HHmmss}.csv";
+        return File(csvData, "text/csv", fileName);
+    }
+
+    [HttpGet("activity/export-csv")]
+    public async Task<IActionResult> ExportRecentActivityToCsv([FromQuery] int limit = 100)
+    {
+        var csvData = await _reportService.ExportRecentActivityToCsvAsync(limit);
+        var fileName = $"RecentActivity_{DateTime.UtcNow:yyyy-MM-dd_HHmmss}.csv";
+        return File(csvData, "text/csv", fileName);
+    }
 }
