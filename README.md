@@ -101,13 +101,6 @@ npm run dev
 
 La aplicación estará disponible en `http://localhost:3000`
 
-## Credenciales de Demo
-
-- **Usuario**: `admin`
-- **Contraseña**: `admin123`
-
-También puedes registrar un nuevo usuario.
-
 ## Endpoints API
 
 ### Autenticación
